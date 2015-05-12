@@ -35,8 +35,8 @@ Or run stand-alone
 wait-for-postgres --username=user --password=pass --quiet
 ```
 
-Compatibilty
+Building
 ============
 
-The `durations` module uses `process.hrtime()`, therefore it will work only in node.js, not in browsers.
+cake build
 

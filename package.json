@@ -26,11 +26,13 @@
     "lib": "./lib"
   },
   "dependencies" : {
+    "commander": "~2.8",
+    "durations": "~1",
+    "pg" : "~4.3",
     "q": "~1.4"
   },
   "devDependencies": {
     "coffee-script": "~1.9",
-    "durations": "~1",
     "mocha": "~1.20.1",
     "timeunit": "~1.1.1"
   },

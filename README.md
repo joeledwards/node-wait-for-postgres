@@ -1,49 +1,39 @@
 
-Stopwatch
+Wait for Postgres
 ===========
 
-A nanosecond granularity stopwatch with chainable control methods,
-and formatting built in.
-
-Timer
-=====
-
-Times the execution of a function, and returns the duration.
-
-Duration
-========
-
-Represents a duration with nanosecond granularity, and provides methods
-for converting to other granularities, and formatting the duration.
+Waits for a PostgreSQL connection to become available, optionally running
+a custom query to determine if the connection is valid.
 
 Installation
 ============
 
 ```bash
-npm install --save durations
+npm install --save wait-for-postgres
 ```
 
 Usage
 =====
 
+Run as a module within another script:
+
 ```coffeescript
-durations = require 'durations'
+waitForPg = require 'wait-for-postgres'
+config =
+  username: user
+  password: pass
+  quiet: true
+  query: 'SELECT 1'
 
-watch = durations.stopwatch()
-watch.stop()  # Pauses the stopwatch. Returns the stopwatch.
-watch.start() # Starts the stopwatch from where it was last stopped. Returns the stopwatch.
-watch.reset() # Reset the stopwatch (duration is set back to zero). Returns the stopwatch.
-duration = watch.duration() # Returns the Duration.
-
-console.log "Took", durations.time(someFunction), "to do something."
-
-durations.timeAsync(someFunction).then((duration) ->
-  console.log "Took", duration.format(), "to do something."
-)
-
-console.log "Duration is", durations.duration(nanoseconds).format()
+waitForPg.wait(config)
 ```
       
+
+Or run stand-alone
+
+```bash
+wait-for-postgres --username=user --password=pass --quiet
+```
 
 Compatibilty
 ============

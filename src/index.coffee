@@ -93,6 +93,7 @@ runScript = () ->
 # Module
 module.exports =
   await: waitForPostgres
+  run: runScript
 
 # If run directly
 if require.main == module

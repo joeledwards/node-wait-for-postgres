@@ -6,7 +6,7 @@
     "Notify",
     "Event"
   ],
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Joel Edwards (https://github.com/joeledwards)",
   "contributors": [
     "Joel Edwards <joeledwards@gmail.com> (https://github.com/joeledwards)"
@@ -25,10 +25,13 @@
   "directories": {
     "lib": "./lib"
   },
-  "dependencies" : {
+  "bin": {
+    "wait-for-postgres": "./bin/wait-for-postgres"
+  },
+  "dependencies": {
     "commander": "~2.8",
     "durations": "~1",
-    "pg" : "~4.3",
+    "pg": "~4.3",
     "q": "~1.4"
   },
   "devDependencies": {

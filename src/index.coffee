@@ -40,6 +40,7 @@ waitForPostgres = (config) ->
           client.query config.query, (error, result) ->
             console.log "Query done."
             done()
+            client.end()
             if (error)
               console.log "[#{error}] Attempt #{attempts} query failure. Time elapsed: #{watch}" if not quiet
               if watch.duration().millis() > totalTimeout
@@ -57,6 +58,7 @@ waitForPostgres = (config) ->
           watch.stop()
           console.log "Connected. #{attempts} attempts over #{watch}"
           done()
+          client.end()
           deferred.resolve 0
 
   testConnection()

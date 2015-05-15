@@ -25,12 +25,12 @@ echo "pass: ${PG_PASSWORD}"
 echo "  db: ${PG_DATABASE}"
 
 coffee src/index.coffee \
+  #--query="SELECT 1" \
   --host=$PG_HOST \
   --port=$PG_PORT \
   --username=$PG_USERNAME \
   --password=$PG_PASSWORD \
   --database=$PG_DATABASE 
-  #--query="SELECT 1"
 
 docker kill $CONTAINER_NAME
 docker rm $CONTAINER_NAME

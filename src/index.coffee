@@ -36,8 +36,9 @@ waitForPostgres = (config) ->
           setTimeout testConnection, connectDelay
       else
         if config.query?
-          console.log "Connected. Running test query."
-          client.query config.query, (error, result) ->
+          queryString = config.query
+          console.log "Connected. Running test query: '#{queryString}'"
+          client.query queryString, (error, result) ->
             console.log "Query done."
             done()
             client.end()
@@ -73,7 +74,7 @@ runScript = () ->
     .option '-p, --port <port>', 'Postgres port (default is 5432)', parseInt
     .option '-P, --password <password>', 'Postgres user password (default is empty)'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
-    .option '-Q, --query', 'Custom query to confirm database state'
+    .option '-Q, --query <query_string>', 'Custom query to confirm database state'
     .option '-t, --connect-timeout <milliseconds>', 'Individual connection attempt timeout (default is 250)', parseInt
     .option '-T, --total-timeout <milliseconds>', 'Total timeout across all connect attempts (dfault is 15000)', parseInt
     .option '-u, --username <username>', 'Posgres user name (default is postgres)'

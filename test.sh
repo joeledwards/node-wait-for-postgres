@@ -25,7 +25,7 @@ echo "pass: ${PG_PASSWORD}"
 echo "  db: ${PG_DATABASE}"
 
 coffee src/index.coffee \
-  #--query="SELECT 1" \
+  --query="SELECT 1" \
   --host=$PG_HOST \
   --port=$PG_PORT \
   --username=$PG_USERNAME \

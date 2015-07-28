@@ -8,10 +8,11 @@ waitForPostgres = (config) ->
   deferred = Q.defer()
   uri = "postgres://#{config.username}:#{config.password}@#{config.host}:#{config.port}/#{config.database}"
 
-  connectTimeoutMilliseconds = 250
-  totalTimeoutMilliseconds = 15000
-  testKey = 'CHECK-CONNECTION-KEY'
-  quiet = false
+  # timeouts in milliseconds
+  connectTimeout = 250
+  totalTimeout = 15000
+
+  quiet = config.quiet
 
   watch = durations.stopwatch().start()
   connectWatch = durations.stopwatch()
@@ -24,27 +25,31 @@ waitForPostgres = (config) ->
     connectWatch.reset().start()
     pg.connect uri, (error, client, done) ->
       connectWatch.stop()
-      if (error)
+      if error?
         console.log "[#{error}] Attempt #{attempts} timed out. Time elapsed: #{watch}" if not quiet
-        if watch.duration().millis() > totalTimeoutMilliseconds
+        if watch.duration().millis() > totalTimeout
           console.log "Could not connect to Postgres." if not quiet
           deferred.resolve 1
         else
-          totalRemaining = Math.min connectTimeoutMilliseconds, Math.max(0, totalTimeoutMilliseconds - watch.duration().millis())
-          connectDelay = Math.min totalRemaining, Math.max(0, connectTimeoutMilliseconds - connectWatch.duration().millis())
+          totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
+          connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
           setTimeout testConnection, connectDelay
       else
-        if config.query
-          client.query config.query, (error, result) ->
+        if config.query?
+          queryString = config.query
+          console.log "Connected. Running test query: '#{queryString}'"
+          client.query queryString, (error, result) ->
+            console.log "Query done."
             done()
+            client.end()
             if (error)
               console.log "[#{error}] Attempt #{attempts} query failure. Time elapsed: #{watch}" if not quiet
-              if watch.duration().millis() > totalTimeoutMilliseconds
+              if watch.duration().millis() > totalTimeout
                 console.log "Postgres test query failed." if not quiet
                 deferred.resolve 1
               else
-                totalRemaining = Math.min connectTimeoutMilliseconds, Math.max(0, totalTimeoutMilliseconds - watch.duration().millis())
-                connectDelay = Math.min totalRemaining, Math.max(0, connectTimeoutMilliseconds - connectWatch.duration().millis())
+                totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
+                connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
                 setTimeout testConnection, connectDelay
             else
               watch.stop()
@@ -54,6 +59,7 @@ waitForPostgres = (config) ->
           watch.stop()
           console.log "Connected. #{attempts} attempts over #{watch}"
           done()
+          client.end()
           deferred.resolve 0
 
   testConnection()
@@ -68,10 +74,10 @@ runScript = () ->
     .option '-p, --port <port>', 'Postgres port (default is 5432)', parseInt
     .option '-P, --password <password>', 'Postgres user password (default is empty)'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
-    .option '-Q, --query', 'Custom query to confirm database state'
+    .option '-Q, --query <query_string>', 'Custom query to confirm database state'
     .option '-t, --connect-timeout <milliseconds>', 'Individual connection attempt timeout (default is 250)', parseInt
     .option '-T, --total-timeout <milliseconds>', 'Total timeout across all connect attempts (dfault is 15000)', parseInt
-    .option '-u, --username <username>', 'Posgres user name (default is postgres)', parseInt
+    .option '-u, --username <username>', 'Posgres user name (default is postgres)'
     .parse(process.argv)
 
   config =
@@ -81,6 +87,7 @@ runScript = () ->
     password: program.password ? ''
     database: program.database ? 'postgres'
     query: program.query ? null
+    quiet: program.quiet ? false
 
   waitForPostgres(config)
   .then (code) ->
@@ -89,6 +96,7 @@ runScript = () ->
 # Module
 module.exports =
   await: waitForPostgres
+  run: runScript
 
 # If run directly
 if require.main == module

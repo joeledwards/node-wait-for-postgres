@@ -30,7 +30,9 @@ coffee src/index.coffee \
   --port=$PG_PORT \
   --username=$PG_USERNAME \
   --password=$PG_PASSWORD \
-  --database=$PG_DATABASE 
+  --database=$PG_DATABASE \
+  --connect-timeout=100 \
+  --total-timeout=5000
 
 docker kill $CONTAINER_NAME
 docker rm $CONTAINER_NAME

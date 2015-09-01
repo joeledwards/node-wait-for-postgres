@@ -9,8 +9,8 @@ waitForPostgres = (config) ->
   uri = "postgres://#{config.username}:#{config.password}@#{config.host}:#{config.port}/#{config.database}"
 
   # timeouts in milliseconds
-  connectTimeout = 250
-  totalTimeout = 15000
+  connectTimeout = config.connectTimeout
+  totalTimeout = config.totalTimeout
 
   quiet = config.quiet
 
@@ -86,6 +86,8 @@ runScript = () ->
     username: program.username ? 'postgres'
     password: program.password ? ''
     database: program.database ? 'postgres'
+    connectTimeout: program.connectTimeout ? 250
+    totalTimeout: program.totalTimeout ? 15000
     query: program.query ? null
     quiet: program.quiet ? false
 

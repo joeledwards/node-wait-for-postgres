@@ -26,7 +26,8 @@
     "lib": "./lib"
   },
   "bin": {
-    "wait-for-postgres": "./bin/wait-for-postgres"
+    "wait-for-postgres": "./bin/wait-for-postgres",
+    "wait4pg": "./bin/wait-for-postgres"
   },
   "dependencies": {
     "commander": "~2.8",

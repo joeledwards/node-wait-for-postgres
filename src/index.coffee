@@ -9,8 +9,8 @@ waitForPostgres = (config) ->
   uri = "postgres://#{config.username}:#{config.password}@#{config.host}:#{config.port}/#{config.database}"
 
   # timeouts in milliseconds
-  connectTimeout = 250
-  totalTimeout = 15000
+  connectTimeout = config.connectTimeout
+  totalTimeout = config.totalTimeout
 
   quiet = config.quiet
 
@@ -75,8 +75,8 @@ runScript = () ->
     .option '-P, --password <password>', 'Postgres user password (default is empty)'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
     .option '-Q, --query <query_string>', 'Custom query to confirm database state'
-    .option '-t, --connect-timeout <milliseconds>', 'Individual connection attempt timeout (default is 250)', parseInt
-    .option '-T, --total-timeout <milliseconds>', 'Total timeout across all connect attempts (dfault is 15000)', parseInt
+    .option '-t, --connect-timeout <connect_timeout>', 'Individual connection attempt timeout (default is 250)', parseInt
+    .option '-T, --total-timeout <total_timeout>', 'Total timeout across all connect attempts (dfault is 15000)', parseInt
     .option '-u, --username <username>', 'Posgres user name (default is postgres)'
     .parse(process.argv)
 
@@ -88,6 +88,8 @@ runScript = () ->
     database: program.database ? 'postgres'
     query: program.query ? null
     quiet: program.quiet ? false
+    totalTimeout: program.totalTimeout ? 15000
+    connectTimeout: program.connectTimeout ? 250
 
   waitForPostgres(config)
   .then (code) ->

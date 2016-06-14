@@ -30,14 +30,14 @@
     "wait4pg": "./bin/wait-for-postgres"
   },
   "dependencies": {
-    "commander": "~2.8",
-    "durations": "~1",
-    "pg": "~4.4",
-    "q": "~1.4"
+    "commander": "^2.9.0",
+    "durations": "^2.2.0",
+    "pg": "^5.1.0",
+    "q": "^1.4.1"
   },
   "devDependencies": {
-    "coffee-script": "~1.9.3",
-    "mocha": "~2.3.0"
+    "coffee-script": "^1.10.0",
+    "mocha": "^2.5.3"
   },
   "scripts": {
     "prepublish": "cake build",

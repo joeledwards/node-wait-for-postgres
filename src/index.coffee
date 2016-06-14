@@ -3,10 +3,21 @@ pg = require 'pg'
 program = require 'commander'
 durations = require 'durations'
 
+getConnection = (uri, connectTimeout) ->
+  d = Q.defer()
+  client = new pg.Client uri
+  client.connect (error) -> if error? then d.reject error else d.resolve client
+  Q.timeout d.promise, connectTimeout, new Error('connection timeout')
+  .then (client) -> client
+  .catch (error) ->
+    client.end()
+    throw error
+
 # Wait for Postgres to become available
 waitForPostgres = (config) ->
   deferred = Q.defer()
   uri = "postgres://#{config.username}:#{config.password}@#{config.host}:#{config.port}/#{config.database}"
+  console.log "URI: #{uri}"
 
   # timeouts in milliseconds
   connectTimeout = config.connectTimeout
@@ -23,44 +34,50 @@ waitForPostgres = (config) ->
   testConnection = () ->
     attempts += 1
     connectWatch.reset().start()
-    pg.connect uri, (error, client, done) ->
+
+    # Establish a client connection
+    getConnection uri, connectTimeout
+
+    # Run the test query with the connected client
+    .then (client) ->
       connectWatch.stop()
-      if error?
-        console.log "[#{error}] Attempt #{attempts} timed out. Time elapsed: #{watch}" if not quiet
-        if watch.duration().millis() > totalTimeout
-          console.log "Could not connect to Postgres." if not quiet
-          deferred.resolve 1
-        else
-          totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
-          connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
-          setTimeout testConnection, connectDelay
-      else
-        if config.query?
-          queryString = config.query
-          console.log "Connected. Running test query: '#{queryString}'"
-          client.query queryString, (error, result) ->
-            console.log "Query done."
-            done()
-            client.end()
-            if (error)
-              console.log "[#{error}] Attempt #{attempts} query failure. Time elapsed: #{watch}" if not quiet
-              if watch.duration().millis() > totalTimeout
-                console.log "Postgres test query failed." if not quiet
-                deferred.resolve 1
-              else
-                totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
-                connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
-                setTimeout testConnection, connectDelay
-            else
-              watch.stop()
-              console.log "Query succeeded. #{attempts} attempts over #{watch}"
-              deferred.resolve 0
-        else
-          watch.stop()
-          console.log "Connected. #{attempts} attempts over #{watch}"
-          done()
+
+      if config.query?
+        queryString = config.query
+        console.log "Connected. Running test query: '#{queryString}'"
+        client.query queryString, (error, result) ->
+          console.log "Query done."
           client.end()
-          deferred.resolve 0
+          if (error)
+            console.log "[#{error}] Attempt #{attempts} query failure. Time elapsed: #{watch}" if not quiet
+            if watch.duration().millis() > totalTimeout
+              console.log "Postgres test query failed." if not quiet
+              deferred.resolve 1
+            else
+              totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
+              connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
+              setTimeout testConnection, connectDelay
+          else
+            watch.stop()
+            console.log "Query succeeded after #{attempts} attempt(s) over #{watch}"
+            deferred.resolve 0
+      else
+        watch.stop()
+        console.log "Connected after #{attempts} attempt(s) over #{watch}"
+        client.end()
+        deferred.resolve 0
+
+    # Handle connection failure
+    .catch (error) ->
+      connectWatch.stop()
+      console.log "[#{error}] Attempt #{attempts} timed out. Time elapsed: #{watch}" if not quiet
+      if watch.duration().millis() > totalTimeout
+        console.log "Could not connect to Postgres." if not quiet
+        deferred.resolve 1
+      else
+        totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
+        connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
+        setTimeout testConnection, connectDelay
 
   testConnection()
 
@@ -69,14 +86,14 @@ waitForPostgres = (config) ->
 # Script was run directly
 runScript = () ->
   program
-    .option '-D, --database <db_name>', 'Postgres database (default is postgres)'
-    .option '-h, --host <hostname>', 'Postgres host (default is localhost)'
+    .option '-D, --database <database>', 'Postgres database name (default is postgres)'
+    .option '-h, --host <host>', 'Postgres hostname (default is localhost)'
     .option '-p, --port <port>', 'Postgres port (default is 5432)', parseInt
     .option '-P, --password <password>', 'Postgres user password (default is empty)'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
     .option '-Q, --query <query_string>', 'Custom query to confirm database state'
-    .option '-t, --connect-timeout <milliseconds>', 'Individual connection attempt timeout (default is 250)', parseInt
-    .option '-T, --total-timeout <milliseconds>', 'Total timeout across all connect attempts (dfault is 15000)', parseInt
+    .option '-t, --connect-timeout <connect-timeout>', 'Individual connection attempt timeout (default is 250)', parseInt
+    .option '-T, --total-timeout <total-timeout>', 'Total timeout across all connect attempts (dfault is 15000)', parseInt
     .option '-u, --username <username>', 'Posgres user name (default is postgres)'
     .parse(process.argv)
 

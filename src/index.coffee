@@ -14,7 +14,18 @@ getConnection = (uri, connectTimeout) ->
     throw error
 
 # Wait for Postgres to become available
-waitForPostgres = (config) ->
+waitForPostgres = (partialConfig) ->
+  config =
+    host: partialConfig.host ? 'localhost'
+    port: partialConfig.port ? 5432
+    username: partialConfig.username ? 'postgres'
+    password: partialConfig.password ? ''
+    database: partialConfig.database ? 'postgres'
+    connectTimeout: partialConfig.connectTimeout ? 250
+    totalTimeout: partialConfig.totalTimeout ? 15000
+    query: partialConfig.query ? null
+    quiet: partialConfig.quiet ? false
+
   deferred = Q.defer()
   uri = "postgres://#{config.username}:#{config.password}@#{config.host}:#{config.port}/#{config.database}"
   console.log "URI: #{uri}"
@@ -97,18 +108,18 @@ runScript = () ->
     .option '-u, --username <username>', 'Posgres user name (default is postgres)'
     .parse(process.argv)
 
-  config =
-    host: program.host ? 'localhost'
-    port: program.port ? 5432
-    username: program.username ? 'postgres'
-    password: program.password ? ''
-    database: program.database ? 'postgres'
-    connectTimeout: program.connectTimeout ? 250
-    totalTimeout: program.totalTimeout ? 15000
-    query: program.query ? null
-    quiet: program.quiet ? false
+  partialConfig =
+    host: program.host
+    port: program.port
+    username: program.username
+    password: program.password
+    database: program.database
+    connectTimeout: program.connectTimeout
+    totalTimeout: program.totalTimeout
+    query: program.query
+    quiet: program.quiet
 
-  waitForPostgres(config)
+  waitForPostgres(partialConfig)
   .then (code) ->
     process.exit code
 

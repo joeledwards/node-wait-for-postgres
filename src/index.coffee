@@ -1,98 +1,90 @@
-Q = require 'q'
+P = require 'bluebird'
 pg = require 'pg'
 program = require 'commander'
 durations = require 'durations'
 
+config = require './config'
+
 getConnection = (uri, connectTimeout) ->
-  d = Q.defer()
-  client = new pg.Client uri
-  client.connect (error) -> if error? then d.reject error else d.resolve client
-  Q.timeout d.promise, connectTimeout, new Error('connection timeout')
-  .then (client) -> client
+  new P (resolve, reject) ->
+    client = new pg.Client uri
+    client.connect (error) ->
+      if error? then reject error else resolve client
+  .timeout connectTimeout
   .catch (error) ->
     client.end()
     throw error
 
 # Wait for Postgres to become available
 waitForPostgres = (partialConfig) ->
-  config =
-    host: partialConfig.host ? 'localhost'
-    port: partialConfig.port ? 5432
-    username: partialConfig.username ? 'postgres'
-    password: partialConfig.password ? ''
-    database: partialConfig.database ? 'postgres'
-    connectTimeout: partialConfig.connectTimeout ? 250
-    totalTimeout: partialConfig.totalTimeout ? 15000
-    query: partialConfig.query ? null
-    quiet: partialConfig.quiet ? false
+  config.validate partialConfig
+  .then (cfg) ->
+    new P (resolve) ->
+      {
+        username, password, host, port, database,
+        connectTimeout, totalTimeout, quiet, query
+      } = cfg
 
-  deferred = Q.defer()
-  uri = "postgres://#{config.username}:#{config.password}@#{config.host}:#{config.port}/#{config.database}"
-  console.log "URI: #{uri}"
+      uri = "postgres://#{username}:#{password}@#{host}:#{port}/#{database}"
+      console.log "URI: #{uri}"
 
-  # timeouts in milliseconds
-  connectTimeout = config.connectTimeout
-  totalTimeout = config.totalTimeout
+      watch = durations.stopwatch().start()
+      connectWatch = durations.stopwatch()
 
-  quiet = config.quiet
+      attempts = 0
 
-  watch = durations.stopwatch().start()
-  connectWatch = durations.stopwatch()
+      # Recursive connection test function
+      testConnection = () ->
+        attempts += 1
+        connectWatch.reset().start()
 
-  attempts = 0
+        # Establish a client connection
+        getConnection uri, connectTimeout
 
-  # Recursive connection test function
-  testConnection = () ->
-    attempts += 1
-    connectWatch.reset().start()
+        # Run the test query with the connected client
+        .then (client) ->
+          connectWatch.stop()
 
-    # Establish a client connection
-    getConnection uri, connectTimeout
-
-    # Run the test query with the connected client
-    .then (client) ->
-      connectWatch.stop()
-
-      if config.query?
-        queryString = config.query
-        console.log "Connected. Running test query: '#{queryString}'"
-        client.query queryString, (error, result) ->
-          console.log "Query done."
-          client.end()
-          if (error)
-            console.log "[#{error}] Attempt #{attempts} query failure. Time elapsed: #{watch}" if not quiet
-            if watch.duration().millis() > totalTimeout
-              console.log "Postgres test query failed." if not quiet
-              deferred.resolve 1
-            else
-              totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
-              connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
-              setTimeout testConnection, connectDelay
+          # If a query was supplied, it must succeed before reporting success
+          if query?
+            console.log "Connected. Running test query: '#{query}'"
+            client.query query, (error, result) ->
+              console.log "Query done."
+              client.end()
+              if (error)
+                console.log "[#{error}] Attempt #{attempts} query failure. Time elapsed: #{watch}" if not quiet
+                if watch.duration().millis() > totalTimeout
+                  console.log "Postgres test query failed." if not quiet
+                  resolve 1
+                else
+                  totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
+                  connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
+                  setTimeout testConnection, connectDelay
+              else
+                watch.stop()
+                console.log "Query succeeded after #{attempts} attempt(s) over #{watch}"
+                resolve 0
+          # If a query was not supplied, report success
           else
             watch.stop()
-            console.log "Query succeeded after #{attempts} attempt(s) over #{watch}"
-            deferred.resolve 0
-      else
-        watch.stop()
-        console.log "Connected after #{attempts} attempt(s) over #{watch}"
-        client.end()
-        deferred.resolve 0
+            console.log "Connected after #{attempts} attempt(s) over #{watch}"
+            client.end()
+            resolve 0
 
-    # Handle connection failure
-    .catch (error) ->
-      connectWatch.stop()
-      console.log "[#{error}] Attempt #{attempts} timed out. Time elapsed: #{watch}" if not quiet
-      if watch.duration().millis() > totalTimeout
-        console.log "Could not connect to Postgres." if not quiet
-        deferred.resolve 1
-      else
-        totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
-        connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
-        setTimeout testConnection, connectDelay
+        # Handle connection failure
+        .catch (error) ->
+          connectWatch.stop()
+          console.log "[#{error}] Attempt #{attempts} timed out. Time elapsed: #{watch}" if not quiet
+          if watch.duration().millis() > totalTimeout
+            console.log "Could not connect to Postgres." if not quiet
+            resolve 1
+          else
+            totalRemaining = Math.min connectTimeout, Math.max(0, totalTimeout - watch.duration().millis())
+            connectDelay = Math.min totalRemaining, Math.max(0, connectTimeout - connectWatch.duration().millis())
+            setTimeout testConnection, connectDelay
 
-  testConnection()
-
-  deferred.promise
+      # First attempt
+      testConnection()
 
 # Script was run directly
 runScript = () ->

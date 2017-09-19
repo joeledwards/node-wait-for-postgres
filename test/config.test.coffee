@@ -26,8 +26,14 @@ expectInvalid = (cfg) ->
 describe "wait-for-postgres' config module", ->
   it "should permit an null config", -> expectValid null
   it "should permit an undefined config", -> expectValid undefined
+
   it "should allow a connectTimeout of 0", -> expectValid {connectTimeout: 1}
   it "should not allow a connectTimeout of -1", -> expectInvalid {connectTimeout: -1}
+
   it "should allow a totalTimeout of 0", -> expectValid {totalTimeout: 0}
   it "should not allow a totalTimeout of -1", -> expectInvalid {totalTimeout: -1}
+
+  it "should allow a host of 'a'", -> expectValid {host: 'a'}
+  it "should not allow a null host", -> expectInvalid {host: null}
+  it "should not allow an empty host of", -> expectInvalid {host: ''}
 

@@ -26,7 +26,8 @@ waitForPostgres = (partialConfig) ->
       } = cfg
 
       uri = "postgres://#{username}:#{password}@#{host}:#{port}/#{database}"
-      console.log "URI: #{uri}"
+      masked = url.replace password, '***'
+      console.log "URI: #{masked}"
 
       watch = durations.stopwatch().start()
       connectWatch = durations.stopwatch()

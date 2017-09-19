@@ -15,6 +15,13 @@ getConnection = (uri, connectTimeout) ->
     client.end()
     throw error
 
+# Generate the connection URI
+makeUri = (cfg, pass) ->
+  { username, password, host, port, database, } = cfg
+  pass = pass ? password
+
+  "postgres://#{username}:#{pass}@#{host}:#{port}/#{database}"
+
 # Wait for Postgres to become available
 waitForPostgres = (partialConfig) ->
   config.validate partialConfig
@@ -25,8 +32,8 @@ waitForPostgres = (partialConfig) ->
         connectTimeout, totalTimeout, quiet, query
       } = cfg
 
-      uri = "postgres://#{username}:#{password}@#{host}:#{port}/#{database}"
-      masked = url.replace password, '***'
+      uri = makeUri cfg
+      masked = makeUri cfg, '***'
       console.log "URI: #{masked}"
 
       watch = durations.stopwatch().start()

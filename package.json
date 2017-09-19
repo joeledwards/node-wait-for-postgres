@@ -1,6 +1,6 @@
 {
   "name": "wait-for-postgres",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Wait for a Postgres connection to become available",
   "keywords": [
     "Postgres",
